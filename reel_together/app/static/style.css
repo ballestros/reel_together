@@ -25,6 +25,9 @@
 }
 
 * { box-sizing: border-box; }
+/* The `hidden` attribute must win over the display rules below (e.g. modals
+   set display:grid/flex, which would otherwise override `[hidden]`). */
+[hidden] { display: none !important; }
 html, body { margin: 0; padding: 0; }
 body {
   background: var(--bg);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- Fix all `hidden` elements (the Add-a-title and Fix-the-match modals, the
+  TV season/episode fields, the appearance menu) showing on load. Their
+  `display` rules were overriding the `hidden` attribute; `[hidden]` is now
+  enforced, so they stay closed until opened.
+
 ## 0.1.1
 
 - Fix add-on build failing with `pip: not found`: pin the `python:3.12-slim`
