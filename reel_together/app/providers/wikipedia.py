@@ -50,6 +50,34 @@ def _guess_year(text: str) -> Optional[int]:
     return int(m.group(0)) if m else None
 
 
+def _claim_int(claims: dict, prop: str) -> Optional[int]:
+    """Best integer value for a Wikidata property, honouring preferred rank."""
+    chosen = None
+    for c in claims.get(prop) or []:
+        rank = c.get("rank")
+        if rank == "deprecated":
+            continue
+        if rank == "preferred":
+            chosen = c
+            break
+        if chosen is None:
+            chosen = c
+    if chosen is None:
+        return None
+    try:
+        amount = chosen["mainsnak"]["datavalue"]["value"]["amount"]
+        return int(float(str(amount).lstrip("+")))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _parse_counts(entity_json: dict, qid: str):
+    """(seasons, episodes) from a Wikidata EntityData JSON payload."""
+    ent = (entity_json.get("entities") or {}).get(qid) or {}
+    claims = ent.get("claims") or {}
+    return _claim_int(claims, "P2437"), _claim_int(claims, "P1113")
+
+
 class WikipediaProvider(Provider):
     name = "wikipedia"
 
@@ -102,14 +130,53 @@ class WikipediaProvider(Provider):
             data.get("thumbnail") or {}
         ).get("source")
         page = ((data.get("content_urls") or {}).get("desktop") or {}).get("page")
+        resolved_type = type_ if type_ != "unknown" else _guess_type(desc)
+
+        extra = {"description": desc}
+        # Season/episode counts come from the article's linked Wikidata item.
+        if resolved_type in ("tv", "unknown"):
+            seasons, episodes = self._episode_counts(str(source_id))
+            if seasons:
+                extra["seasons"] = seasons
+            if episodes:
+                extra["episodes"] = episodes
+
         return TitleDetails(
             source="wikipedia",
             source_id=str(source_id),
             title=data.get("title") or str(source_id),
-            type=type_ if type_ != "unknown" else _guess_type(desc),
+            type=resolved_type,
             year=_guess_year(desc),
             overview=data.get("extract") or desc,
             poster_url=poster,
             source_url=page or f"{API_ROOT}/wiki/{title}",
-            extra={"description": desc},
+            extra=extra,
         )
+
+    def _episode_counts(self, page_key: str):
+        """(seasons, episodes) from the article's linked Wikidata item, or (None, None)."""
+        try:
+            r = _session.get(
+                f"{API_ROOT}/w/api.php",
+                params={
+                    "action": "query", "format": "json", "prop": "pageprops",
+                    "ppprop": "wikibase_item", "redirects": "1", "titles": page_key,
+                },
+                timeout=8,
+            )
+            r.raise_for_status()
+            pages = (r.json().get("query") or {}).get("pages") or {}
+            qid = None
+            for p in pages.values():
+                qid = (p.get("pageprops") or {}).get("wikibase_item")
+                if qid:
+                    break
+            if not qid:
+                return (None, None)
+            r2 = _session.get(
+                f"https://www.wikidata.org/wiki/Special:EntityData/{qid}.json", timeout=8
+            )
+            r2.raise_for_status()
+            return _parse_counts(r2.json(), qid)
+        except (requests.RequestException, ValueError):
+            return (None, None)

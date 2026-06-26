@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4
+
+- Pull TV season and episode counts from Wikidata (the article's linked item,
+  properties P2437 / P1113) when adding a show from Wikipedia — so no-key
+  installs get episode tracking too. The Add-a-title modal now pre-fills the
+  season/episode fields from the provider (Wikidata or TMDB) so you can confirm
+  or tweak them before saving.
+
 ## 0.1.3
 
 - Show the sidebar panel to all Home Assistant users, not just admins

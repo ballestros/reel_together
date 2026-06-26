@@ -329,9 +329,19 @@ function selectModalResult(r) {
   sel.hidden = false;
   sel.innerHTML = `${r.poster_url ? `<img src="${esc(r.poster_url)}" alt="">` : `<div class="ph"></div>`}
     <div><div class="t">${esc(r.title)}</div><div class="s muted">${esc([r.year, r.source].filter(Boolean).join(" · "))}</div></div>`;
-  if (r.type === "tv") { $("#f-type").value = "tv"; $("#tv-fields").hidden = false; }
+  if (r.type === "tv") { $("#f-type").value = "tv"; $("#tv-fields").hidden = false; prefillTv(r); }
   else { $("#f-type").value = "movie"; $("#tv-fields").hidden = true; }
   $("#modal-add").disabled = false;
+}
+
+async function prefillTv(r) {
+  // Pull season/episode counts (Wikidata via Wikipedia, or TMDB) into the fields.
+  try {
+    const d = await api(`/api/details?source=${encodeURIComponent(r.source)}&source_id=${encodeURIComponent(r.source_id)}&type=tv`);
+    const ex = (d && d.extra) || {};
+    if (ex.seasons) $("#f-seasons").value = ex.seasons;
+    if (ex.episodes) $("#f-episodes").value = ex.episodes;
+  } catch (_) {}
 }
 async function submitModal() {
   if (!state.modalSel) return;

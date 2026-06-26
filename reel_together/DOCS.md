@@ -35,7 +35,10 @@ Wikipedia is used with no key at all — TMDB only upgrades the experience.
 
 - **Add a title** — click **+ Add title**, search for the movie or show, then
   pick its type, streaming service, who's interested, and a starting column.
-  Search results come from your active provider (Wikipedia or TMDB).
+  Search results come from your active provider (Wikipedia or TMDB). For TV
+  shows, the season and episode counts are filled in for you — from Wikidata
+  (Wikipedia's structured data) on a no-key install, or TMDB if a key is set —
+  and you can adjust them before saving.
 - **Move things along** — drag a card between the three columns to change its
   status. (On the *Watching Now* column, TV cards show an episode progress bar
   with − / + steppers and a **Mark finished** button that auto-fills at the

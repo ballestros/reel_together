@@ -88,6 +88,15 @@ def create_app() -> Flask:
             r["in_catalog"] = existing.get((r["source"], r["source_id"]))
         return jsonify(results=results, provider=config.active_provider_name())
 
+    @app.get("/api/details")
+    def api_details():
+        source = request.args.get("source")
+        source_id = request.args.get("source_id")
+        if not source or not source_id:
+            return jsonify(error="source and source_id are required"), 400
+        det = provider_for_source(source).details(str(source_id), request.args.get("type", "unknown"))
+        return jsonify(det.to_dict() if det else {})
+
     @app.get("/api/titles")
     def api_titles():
         return jsonify(
@@ -131,8 +140,8 @@ def create_app() -> Flask:
             "poster_url": pick("poster_url"),
             "source_url": pick("source_url"),
             "service": body.get("service"),
-            "seasons": body.get("seasons"),
-            "episodes_total": body.get("episodes_total"),
+            "seasons": body.get("seasons") or (det.get("extra") or {}).get("seasons"),
+            "episodes_total": body.get("episodes_total") or (det.get("extra") or {}).get("episodes"),
             "extra": det.get("extra") or {},
         }
         row = db.add_title(data, added_by=g.user["id"])
