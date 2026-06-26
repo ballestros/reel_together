@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+- Show the sidebar panel to all Home Assistant users, not just admins
+  (`panel_admin: false`), so the whole household can open Reel Together.
+- Keep the household member list live: the board now refreshes who's joined
+  without a page reload, and per-person dot colours stay stable as people join.
+
 ## 0.1.2
 
 - Fix all `hidden` elements (the Add-a-title and Fix-the-match modals, the

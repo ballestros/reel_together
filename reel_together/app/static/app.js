@@ -40,10 +40,15 @@ function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ 
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 2400); }
 function userColor(id) { return (state.users[id] && state.users[id].color) || "#999"; }
 
+function hashStr(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
 function assignColors() {
-  const ids = Object.keys(state.users);
-  ids.sort((a, b) => a === state.me.id ? -1 : b === state.me.id ? 1 : (state.users[a].display_name || "").localeCompare(state.users[b].display_name || ""));
-  ids.forEach((id, i) => (state.users[id].color = PERSON_COLORS[i % PERSON_COLORS.length]));
+  // Me is always the first colour; everyone else is stable by id hash, so a
+  // newly-joined user never reshuffles existing people's colours.
+  for (const id of Object.keys(state.users)) {
+    state.users[id].color = id === state.me.id
+      ? PERSON_COLORS[0]
+      : PERSON_COLORS[1 + (hashStr(id) % (PERSON_COLORS.length - 1))];
+  }
 }
 
 // ---- boot -----------------------------------------------------------------
@@ -67,7 +72,7 @@ async function boot() {
     if (!$("#modal-backdrop").hidden) return;
     if (!$("#rematch-backdrop").hidden) return;
     if (document.querySelector(".card.dragging")) return;
-    loadTitles().catch(() => {});
+    refreshMe().then(loadTitles).catch(() => {});
   }, 15000);
 }
 
@@ -76,6 +81,17 @@ async function loadTitles() {
   state.titles = data.titles || [];
   populateServiceFilter();
   renderBoard();
+}
+
+async function refreshMe() {
+  // Pick up household members who've joined since page load.
+  try {
+    const me = await api("/api/me");
+    state.config = me.config || state.config;
+    for (const u of me.users) state.users[u.id] = { ...(state.users[u.id] || {}), ...u };
+    if (!state.users[me.user.id]) state.users[me.user.id] = { ...me.user };
+    assignColors();
+  } catch (_) {}
 }
 
 function renderMe() {
