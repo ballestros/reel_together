@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reel Together</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ base_path }}/static/style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">Reel Together</div>
+      <div class="controls">
+        <input id="board-search" class="board-search" type="search" placeholder="Search your list…" autocomplete="off" spellcheck="false">
+        <div class="seg" id="type-filter">
+          <button data-type="all" class="on">All</button>
+          <button data-type="movie">Movies</button>
+          <button data-type="tv">TV</button>
+        </div>
+        <div class="seg" id="person-filter">
+          <button data-person="everyone" class="on">Everyone</button>
+          <button data-person="me">Me</button>
+        </div>
+        <select id="service-filter" class="select" aria-label="Filter by service">
+          <option value="">All services</option>
+        </select>
+        <button id="add-btn" class="btn-accent">+ Add title</button>
+        <div class="topbar-end">
+          <button id="accent-btn" class="icon-btn" title="Appearance">◐</button>
+          <span id="me-avatar" class="avatar" title=""></span>
+        </div>
+      </div>
+    </header>
+    <main id="board" class="board"></main>
+  </div>
+
+  <div id="accent-menu" class="menu" hidden></div>
+
+  <div id="modal-backdrop" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Add a title">
+      <div class="modal-head"><h2>Add a title</h2><button id="modal-close" class="icon-btn">&times;</button></div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="modal-search">Find it</label>
+          <input id="modal-search" type="search" placeholder="Search movies &amp; shows…" autocomplete="off" spellcheck="false">
+          <div id="modal-results" class="modal-results" hidden></div>
+        </div>
+        <div id="modal-selected" class="selected" hidden></div>
+        <div class="field-row">
+          <div class="field"><label for="f-type">Type</label>
+            <select id="f-type"><option value="movie">Movie</option><option value="tv">TV show</option></select></div>
+          <div class="field"><label for="f-service">Streaming on</label>
+            <select id="f-service"></select></div>
+        </div>
+        <div id="tv-fields" class="field-row" hidden>
+          <div class="field"><label for="f-seasons">Seasons</label><input id="f-seasons" type="number" min="1" value="1"></div>
+          <div class="field"><label for="f-episodes">Episodes (total)</label><input id="f-episodes" type="number" min="1" placeholder="e.g. 24"></div>
+        </div>
+        <div class="field"><label>Who's interested</label><div id="f-who" class="who-options"></div></div>
+        <div class="field"><label>Status</label>
+          <div class="seg" id="f-status">
+            <button type="button" data-status="want" class="on">Want to Watch</button>
+            <button type="button" data-status="watching">Watching Now</button>
+            <button type="button" data-status="watched">Finished</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button id="modal-cancel" class="btn-ghost">Cancel</button>
+        <button id="modal-add" class="btn-accent" disabled>Add to list</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rematch-backdrop" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Fix the match">
+      <div class="modal-head"><h2>Fix the match</h2><button id="rematch-close" class="icon-btn">&times;</button></div>
+      <div class="modal-body">
+        <p id="rematch-for" class="muted small"></p>
+        <div class="field">
+          <label for="rematch-search">Search TMDB</label>
+          <input id="rematch-search" type="search" autocomplete="off" spellcheck="false">
+        </div>
+        <div id="rematch-results" class="modal-results"></div>
+      </div>
+      <div class="modal-foot"><button id="rematch-cancel" class="btn-ghost">Cancel</button></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script>window.__BASE__ = "{{ base_path }}";</script>
+  <script src="{{ base_path }}/static/app.js"></script>
+</body>
+</html>
