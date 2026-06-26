@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- Fix add-on build failing with `pip: not found`: pin the `python:3.12-slim`
+  base image directly in the Dockerfile instead of relying on the `build.yaml`
+  override, which Home Assistant could fall back from to its Python-less Alpine
+  base image.
+
 ## 0.1.0
 
 Initial release.
