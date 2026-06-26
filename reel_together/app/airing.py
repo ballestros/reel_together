@@ -10,6 +10,7 @@ import json
 import logging
 import threading
 import time
+from datetime import datetime
 
 from . import db
 from .providers.tvmaze import TVmazeProvider
@@ -30,14 +31,32 @@ def _extra(title: dict) -> dict:
         return {}
 
 
+def _future(airstamp) -> bool:
+    if not airstamp:
+        return False
+    try:
+        dt = datetime.fromisoformat(str(airstamp).replace("Z", "+00:00"))
+        return dt.timestamp() > time.time()
+    except (ValueError, TypeError):
+        return False
+
+
 def refresh_one(title: dict) -> None:
+    """Refresh a TVmaze title's next episode — but avoid needless API calls."""
     if title.get("source") != "tvmaze":
         return
-    ne = TVmazeProvider().next_episode(title["source_id"])
     extra = _extra(title)
-    if extra.get("next_episode") == ne:
+    ne = extra.get("next_episode")
+    # We already know the next episode — no need to call the API until it airs.
+    if ne and _future(ne.get("airstamp")):
         return
-    extra["next_episode"] = ne  # may be None — clears a stale value
+    # Otherwise re-check at most once a day, so ended / between-season shows
+    # aren't polled every cycle.
+    last = extra.get("airing_checked")
+    if last and (time.time() - last) < 86400:
+        return
+    extra["next_episode"] = TVmazeProvider().next_episode(title["source_id"])
+    extra["airing_checked"] = time.time()
     db.update_title(title["id"], {"extra": extra})
 
 

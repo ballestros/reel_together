@@ -7,4 +7,4 @@ TV metadata from a pluggable provider (Wikipedia by default, TMDB when an API
 key is configured).
 """
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"

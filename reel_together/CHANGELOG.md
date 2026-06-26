@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.7
+
+- Fix the periodic flicker: the board now re-renders only when the data has
+  actually changed, instead of rebuilding every card (and reloading posters) on
+  each background refresh.
+- The background refresh reads the local database, not the metadata APIs, so it
+  costs nothing external. The TVmaze "airing" sweep now skips shows whose next
+  episode is already known and re-checks the rest at most once a day, keeping
+  outside calls to a minimum.
+
 ## 0.1.6
 
 - TV shows now come from **TVmaze** (free, no API key): search, posters,

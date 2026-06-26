@@ -78,7 +78,13 @@ async function boot() {
 
 async function loadTitles() {
   const data = await api("/api/titles");
-  state.titles = data.titles || [];
+  const titles = data.titles || [];
+  // Only re-render when something actually changed — otherwise the periodic
+  // refresh rebuilds every card and the board visibly flickers.
+  const sig = JSON.stringify(titles) + "|" + Object.keys(state.users).sort().join(",");
+  if (sig === state._sig) return;
+  state._sig = sig;
+  state.titles = titles;
   populateServiceFilter();
   renderBoard();
 }
