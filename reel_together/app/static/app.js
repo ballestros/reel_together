@@ -167,6 +167,21 @@ function dotsHtml(t) {
   return h;
 }
 
+function relAir(ms) {
+  const days = Math.round((ms - Date.now()) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "tomorrow";
+  if (days < 7) return new Date(ms).toLocaleDateString(undefined, { weekday: "short" });
+  return new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+function airingBadge(t) {
+  const ne = t.extra && t.extra.next_episode;
+  if (!ne || !ne.airstamp) return "";
+  const when = new Date(ne.airstamp).getTime();
+  if (isNaN(when) || when < Date.now()) return "";
+  return `<span class="airing-badge" title="Next episode airs">▶ New ep ${esc(relAir(when))}</span>`;
+}
+
 function card(t, colKey) {
   const el = document.createElement("article");
   el.className = "card";
@@ -181,6 +196,7 @@ function card(t, colKey) {
         <div class="sub">${esc(sub)}</div>
         ${t.service ? `<span class="service">${esc(t.service)}</span>` : ""}
         ${together ? `<span class="together-badge">★ Together</span>` : ""}
+        ${airingBadge(t)}
       </div>
       <div class="dots">${dotsHtml(t)}</div>
       <button class="remove" title="Remove">&times;</button>
@@ -195,6 +211,8 @@ function card(t, colKey) {
     rb.onclick = (e) => { e.stopPropagation(); openRematch(t); };
     $(".top", el).appendChild(rb);
   }
+
+  el.appendChild(statusControl(t)); // touch-friendly status change (drag is mouse-only)
 
   if (colKey === "watching") {
     if (t.type === "tv" && t.episodes_total) el.appendChild(episodeBlock(t));
@@ -220,6 +238,27 @@ function episodeBlock(t) {
     </div>`;
   $$(".stepper button", wrap).forEach(b => b.onclick = (e) => { e.stopPropagation(); stepEpisodes(t, parseInt(b.dataset.d, 10)); });
   return wrap;
+}
+
+function statusControl(t) {
+  // Native select = a good touch target; lets phone users move a card between
+  // columns without drag-and-drop. CSS hides it on mouse/desktop.
+  const sel = document.createElement("select");
+  sel.className = "card-status";
+  if (!t.my_status) {
+    const o = document.createElement("option");
+    o.value = ""; o.textContent = "Add to my list…"; o.disabled = true; o.selected = true;
+    sel.appendChild(o);
+  }
+  for (const c of COLUMNS) {
+    const o = document.createElement("option");
+    o.value = c.key; o.textContent = c.label;
+    if (t.my_status === c.key) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.addEventListener("click", (e) => e.stopPropagation());
+  sel.onchange = (e) => { e.stopPropagation(); if (sel.value) setStatus(t.id, sel.value); };
+  return sel;
 }
 
 function markFinished(t) {

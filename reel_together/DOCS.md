@@ -33,17 +33,18 @@ Wikipedia is used with no key at all — TMDB only upgrades the experience.
 
 ## Using it
 
-- **Add a title** — click **+ Add title**, search for the movie or show, then
-  pick its type, streaming service, who's interested, and a starting column.
-  Search results come from your active provider (Wikipedia or TMDB). For TV
-  shows, the season and episode counts are filled in for you — from Wikidata
-  (Wikipedia's structured data) on a no-key install, or TMDB if a key is set —
-  and you can adjust them before saving.
+- **Add a title** — click **+ Add title** and search. TV shows come from
+  **TVmaze** (free, no key) with posters and accurate season/episode counts;
+  movies come from Wikipedia (or TMDB if a key is set). The search merges both.
+  Pick the type, streaming service, who's interested, and a starting column; for
+  shows the season/episode fields are pre-filled and editable.
 - **Move things along** — drag a card between the three columns to change its
   status. (On the *Watching Now* column, TV cards show an episode progress bar
   with − / + steppers and a **Mark finished** button that auto-fills at the
   finale.)
 - **Rate it** — click the stars on a *Finished* card.
+- **Airing soon** — a TV show with an upcoming episode shows a ▶ "New ep …"
+  badge (e.g. "New ep Fri"); the dates refresh automatically in the background.
 - **Wrong match?** — with a TMDB key set, hover a card and click **↻** to search
   TMDB and pick the correct entry. Useful on the rare occasion background
   enrichment matched an ambiguously-named title to the wrong poster.

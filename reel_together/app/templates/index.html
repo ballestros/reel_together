@@ -13,8 +13,13 @@
   <div id="app">
     <header class="topbar">
       <div class="brand">Reel Together</div>
-      <div class="controls">
-        <input id="board-search" class="board-search" type="search" placeholder="Search your list…" autocomplete="off" spellcheck="false">
+      <div class="bar-actions">
+        <button id="add-btn" class="btn-accent">+ Add<span class="add-label"> title</span></button>
+        <button id="accent-btn" class="icon-btn" title="Appearance">◐</button>
+        <span id="me-avatar" class="avatar" title=""></span>
+      </div>
+      <input id="board-search" class="board-search" type="search" placeholder="Search your list…" autocomplete="off" spellcheck="false">
+      <div class="bar-filters">
         <div class="seg" id="type-filter">
           <button data-type="all" class="on">All</button>
           <button data-type="movie">Movies</button>
@@ -27,11 +32,6 @@
         <select id="service-filter" class="select" aria-label="Filter by service">
           <option value="">All services</option>
         </select>
-        <button id="add-btn" class="btn-accent">+ Add title</button>
-        <div class="topbar-end">
-          <button id="accent-btn" class="icon-btn" title="Appearance">◐</button>
-          <span id="me-avatar" class="avatar" title=""></span>
-        </div>
       </div>
     </header>
     <main id="board" class="board"></main>

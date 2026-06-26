@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.6
+
+- TV shows now come from **TVmaze** (free, no API key): search, posters,
+  overview, and accurate season/episode counts. Movies still come from Wikipedia
+  (or TMDB if a key is set), and search merges both. TMDB background enrichment
+  now targets only Wikipedia-added titles.
+- **Airing soon**: a TV show with an upcoming episode shows a ▶ badge with the
+  next air date on its card, refreshed in the background every few hours.
+
+## 0.1.5
+
+- Mobile-friendly layout. The header now stacks cleanly on phones (brand +
+  actions, then full-width search, then filters) instead of wrapping awkwardly,
+  and collapses to a single row only on wide screens.
+- Touch support: because drag-and-drop is mouse-only, each card gets a status
+  dropdown on touch devices to move it between Want / Watching / Finished; the
+  remove (×) and re-match (↻) controls, previously hover-only, stay visible on
+  touch. Drag-and-drop is unchanged on desktop.
+
 ## 0.1.4
 
 - Pull TV season and episode counts from Wikidata (the article's linked item,

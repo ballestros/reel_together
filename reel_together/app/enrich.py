@@ -46,7 +46,7 @@ def enrich_title(title_id: int) -> bool:
     if not enricher:
         return False
     title = db.get_title(title_id)
-    if not title or title["source"] == "tmdb":
+    if not title or title["source"] != "wikipedia":
         return False
     extra = _extra(title)
     if extra.get("enriched"):

@@ -11,8 +11,8 @@ import logging
 from flask import Flask, abort, g, jsonify, render_template, request
 
 from . import __version__ as VERSION
-from . import auth, config, db, enrich
-from .providers import get_provider, provider_for_source
+from . import airing, auth, config, db, enrich
+from .providers import combined_search, provider_for_source
 
 log = logging.getLogger("reel_together")
 
@@ -30,6 +30,7 @@ def create_app() -> Flask:
     app = Flask(__name__)
     db.init_db()
     enrich.start()  # background TMDB enrichment (no-op without a key)
+    airing.start()  # keep TVmaze 'next episode' dates fresh
 
     # ----------------------------------------------------------------- guard
     @app.before_request
@@ -78,7 +79,7 @@ def create_app() -> Flask:
         if not query:
             return jsonify(results=[])
         limit = min(int(request.args.get("limit", 10) or 10), 20)
-        results = [r.to_dict() for r in get_provider().search(query, limit=limit)]
+        results = [r.to_dict() for r in combined_search(query, limit=limit)]
         # Flag titles already in the household catalog.
         existing = {
             (t["source"], t["source_id"]): t["id"]

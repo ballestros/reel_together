@@ -282,14 +282,23 @@ def suggestions(min_want: int = 2) -> list[dict]:
 
 
 def titles_needing_enrichment() -> list[int]:
-    """Ids of titles not from TMDB that haven't been enriched yet."""
-    rows = get_db().execute("SELECT id, extra FROM titles WHERE source != 'tmdb'").fetchall()
+    """Ids of Wikipedia-sourced titles that haven't been TMDB-enriched yet.
+
+    TVmaze and TMDB titles already carry good data, so only Wikipedia entries
+    are candidates for enrichment.
+    """
+    rows = get_db().execute("SELECT id, extra FROM titles WHERE source = 'wikipedia'").fetchall()
     out = []
     for r in rows:
         extra = json.loads(r["extra"]) if r["extra"] else {}
         if not extra.get("enriched"):
             out.append(r["id"])
     return out
+
+
+def titles_by_source(source: str) -> list[dict]:
+    rows = get_db().execute("SELECT * FROM titles WHERE source = ?", (source,)).fetchall()
+    return [dict(r) for r in rows]
 
 
 # --- Interests -------------------------------------------------------------
