@@ -48,6 +48,7 @@
           <input id="modal-search" type="search" placeholder="Search movies &amp; shows…" autocomplete="off" spellcheck="false">
           <div id="modal-results" class="modal-results" hidden></div>
         </div>
+        <button type="button" id="bulk-link" class="linklike">＋ Paste a whole list instead</button>
         <div id="modal-selected" class="selected" hidden></div>
         <div class="field-row">
           <div class="field"><label for="f-type">Type</label>
@@ -109,6 +110,33 @@
       <div class="modal-foot">
         <button id="edit-cancel" class="btn-ghost">Cancel</button>
         <button id="edit-save" class="btn-accent">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bulk-backdrop" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Add a list">
+      <div class="modal-head"><h2>Add a list</h2><button id="bulk-close" class="icon-btn">&times;</button></div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="bulk-text">Paste titles — one per line</label>
+          <textarea id="bulk-text" rows="6" placeholder="Dune (2021)&#10;The Bear&#10;Past Lives"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Add to</label>
+            <div class="seg" id="bulk-status">
+              <button type="button" data-status="want" class="on">Want to Watch</button>
+              <button type="button" data-status="watching">Watching Now</button>
+              <button type="button" data-status="watched">Finished</button>
+            </div></div>
+        </div>
+        <div class="field"><label>Who's interested</label><div id="bulk-who" class="who-options"></div></div>
+        <div id="bulk-results" class="bulk-results" hidden></div>
+      </div>
+      <div class="modal-foot">
+        <button id="bulk-cancel" class="btn-ghost">Cancel</button>
+        <button id="bulk-find" class="btn-ghost">Find matches</button>
+        <button id="bulk-add" class="btn-accent" disabled>Add selected</button>
       </div>
     </div>
   </div>

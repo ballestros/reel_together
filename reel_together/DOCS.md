@@ -38,6 +38,10 @@ Wikipedia is used with no key at all — TMDB only upgrades the experience.
   movies come from Wikipedia (or TMDB if a key is set). The search merges both.
   Pick the type, streaming service, who's interested, and a starting column; for
   shows the season/episode fields are pre-filled and editable.
+- **Add a whole list** — in the Add dialog click *Paste a whole list instead*,
+  paste titles one per line (optionally `Title (Year)` to disambiguate), choose a
+  status and who, then review and confirm the matches. Handy for seeding your
+  list from somewhere else.
 - **Move things along** — drag a card between the three columns to change its
   status. (On the *Watching Now* column, TV cards show an episode progress bar
   with − / + steppers and a **Mark finished** button that auto-fills at the

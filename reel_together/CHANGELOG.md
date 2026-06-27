@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9
+
+- Batch add: paste a list of titles (one per line, optionally `Title (Year)` to
+  disambiguate), pick a shared status and who, and Reel Together matches each to
+  its best movie/show. You review the matches with posters, untick any wrong
+  ones, and add them all at once — reached via "Paste a whole list instead" in
+  the Add dialog. Good for seeding a watchlist from an existing list.
+
 ## 0.1.8
 
 - Edit a title's details: each card now has a ✎ action that opens a small editor

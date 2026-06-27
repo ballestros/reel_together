@@ -7,6 +7,7 @@ handled by Home Assistant; we read the forwarded user identity in ``auth``.
 from __future__ import annotations
 
 import logging
+import re
 
 from flask import Flask, abort, g, jsonify, render_template, request
 
@@ -24,6 +25,28 @@ def _norm_status(status):
     if status is None:
         return None
     return STATUS_ALIASES.get(status, status)
+
+
+_QUERY_YEAR = re.compile(r"\s*\((\d{4})\)\s*$")
+
+
+def _parse_query(q: str):
+    """Split 'Title (Year)' into (title, year); year is optional."""
+    m = _QUERY_YEAR.search(q)
+    if m:
+        return q[: m.start()].strip(), int(m.group(1))
+    return q, None
+
+
+def _best_match(results, year):
+    """Top search result, preferring one whose year matches when given."""
+    if not results:
+        return None
+    if year:
+        for r in results:
+            if r.year == year:
+                return r
+    return results[0]
 
 
 def create_app() -> Flask:
@@ -54,6 +77,58 @@ def create_app() -> Flask:
             if t["id"] == title_id:
                 return t
         return db.get_title(title_id)
+
+    def _status_and_who(body: dict):
+        status = _norm_status(body.get("status")) or "want"
+        if status not in db.VALID_STATUSES:
+            status = "want"
+        valid_users = {u["id"] for u in db.list_users()}
+        who = [uid for uid in (body.get("who") or [g.user["id"]]) if uid in valid_users]
+        return status, who
+
+    def _add_resolved(item: dict, status: str, who: list) -> dict:
+        """Resolve provider details for one item, add it, and set interests.
+
+        Shared by single add and bulk add. Raises ValueError if the item can't
+        be resolved.
+        """
+        source = item.get("source")
+        source_id = item.get("source_id")
+        if not source or source_id is None:
+            raise ValueError("source and source_id are required")
+        details = provider_for_source(source).details(str(source_id), item.get("type", "unknown"))
+        det = details.to_dict() if details else {}
+
+        def pick(key):
+            val = det.get(key)
+            return val if val not in (None, "") else item.get(key)
+
+        title = pick("title")
+        if not title:
+            raise ValueError("could not resolve a title")
+        extra = det.get("extra") or {}
+        data = {
+            "source": source,
+            "source_id": str(source_id),
+            "type": pick("type") or "unknown",
+            "title": title,
+            "year": pick("year"),
+            "overview": pick("overview"),
+            "poster_url": pick("poster_url"),
+            "source_url": pick("source_url"),
+            "service": item.get("service"),
+            "seasons": item.get("seasons") or extra.get("seasons"),
+            "episodes_total": item.get("episodes_total") or extra.get("episodes"),
+            "extra": extra,
+        }
+        row = db.add_title(data, added_by=g.user["id"])
+        db.add_activity(g.user["id"], row["id"], "added", title)
+        enrich.enqueue(row["id"])
+        valid_users = {u["id"] for u in db.list_users()}
+        for uid in (who or [g.user["id"]]):
+            if uid in valid_users:
+                db.set_interest(uid, row["id"], status=status)
+        return row
 
     # --------------------------------------------------------------- pages
     @app.get("/")
@@ -112,54 +187,52 @@ def create_app() -> Flask:
     @app.post("/api/titles")
     def api_add_title():
         body = request.get_json(silent=True) or {}
-        source = body.get("source")
-        source_id = body.get("source_id")
-        if not source or source_id is None:
-            return jsonify(error="source and source_id are required"), 400
-
-        # Fetch fuller details where possible; fall back to the posted fields.
-        details = provider_for_source(source).details(
-            str(source_id), body.get("type", "unknown")
-        )
-        det = details.to_dict() if details else {}
-
-        def pick(key):
-            val = det.get(key)
-            return val if val not in (None, "") else body.get(key)
-
-        title = pick("title")
-        if not title:
-            return jsonify(error="could not resolve a title"), 422
-
-        data = {
-            "source": source,
-            "source_id": str(source_id),
-            "type": pick("type") or "unknown",
-            "title": title,
-            "year": pick("year"),
-            "overview": pick("overview"),
-            "poster_url": pick("poster_url"),
-            "source_url": pick("source_url"),
-            "service": body.get("service"),
-            "seasons": body.get("seasons") or (det.get("extra") or {}).get("seasons"),
-            "episodes_total": body.get("episodes_total") or (det.get("extra") or {}).get("episodes"),
-            "extra": det.get("extra") or {},
-        }
-        row = db.add_title(data, added_by=g.user["id"])
-        db.add_activity(g.user["id"], row["id"], "added", title)
-
-        # Whose list(s) it lands on. Defaults to the person adding it.
-        status = _norm_status(body.get("status")) or "want"
-        if status not in db.VALID_STATUSES:
-            status = "want"
-        valid_users = {u["id"] for u in db.list_users()}
-        who = [uid for uid in (body.get("who") or [g.user["id"]]) if uid in valid_users]
-        for uid in who or [g.user["id"]]:
-            db.set_interest(uid, row["id"], status=status)
-        db.add_activity(g.user["id"], row["id"], status, title)
-        enrich.enqueue(row["id"])  # silently upgrade to TMDB data when a key is set
-
+        status, who = _status_and_who(body)
+        try:
+            row = _add_resolved(body, status, who)
+        except ValueError as exc:
+            return jsonify(error=str(exc)), (422 if "title" in str(exc) else 400)
         return jsonify(_hydrated(row["id"])), 201
+
+    @app.post("/api/resolve")
+    def api_resolve():
+        """Match a list of free-text titles to their best provider result."""
+        body = request.get_json(silent=True) or {}
+        queries = body.get("queries") or []
+        existing = {
+            (t["source"], t["source_id"]): t["id"]
+            for t in db.list_titles(g.user["id"])
+        }
+        out = []
+        for raw in queries[:80]:
+            q = (raw or "").strip()
+            if not q:
+                continue
+            title_q, year_q = _parse_query(q)
+            match = _best_match(combined_search(title_q, limit=6), year_q)
+            m = match.to_dict() if match else None
+            if m:
+                m["in_catalog"] = existing.get((m["source"], m["source_id"]))
+            out.append({"query": q, "match": m})
+        return jsonify(results=out)
+
+    @app.post("/api/titles/bulk")
+    def api_bulk():
+        """Add a batch of already-resolved items, sharing one status/who."""
+        body = request.get_json(silent=True) or {}
+        items = body.get("items") or []
+        status, who = _status_and_who(body)
+        existing = {(t["source"], t["source_id"]) for t in db.list_titles(g.user["id"])}
+        added, skipped, failed = [], [], []
+        for item in items[:100]:
+            key = (item.get("source"), str(item.get("source_id")))
+            try:
+                row = _add_resolved(item, status, who)
+            except ValueError:
+                failed.append(item.get("title") or item.get("query") or "?")
+                continue
+            (skipped if key in existing else added).append(row["title"])
+        return jsonify(added=added, skipped=skipped, failed=failed)
 
     @app.delete("/api/titles/<int:title_id>")
     def api_delete_title(title_id: int):

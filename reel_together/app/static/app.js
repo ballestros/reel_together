@@ -72,6 +72,7 @@ async function boot() {
     if (!$("#modal-backdrop").hidden) return;
     if (!$("#rematch-backdrop").hidden) return;
     if (!$("#edit-backdrop").hidden) return;
+    if (!$("#bulk-backdrop").hidden) return;
     if (document.querySelector(".card.dragging")) return;
     refreshMe().then(loadTitles).catch(() => {});
   }, 15000);
@@ -328,6 +329,14 @@ async function removeTitle(t) {
 }
 
 // ---- add modal ------------------------------------------------------------
+function buildWhoChips(el) {
+  el.innerHTML = Object.values(state.users).map(u =>
+    `<span class="who-chip ${u.id === state.me.id ? "on" : ""}" data-uid="${esc(u.id)}">
+       <span class="pd" style="background:${userColor(u.id)}">${initials(u.display_name)}</span>${esc(u.id === state.me.id ? "Me" : u.display_name)}
+     </span>`).join("");
+  $$(".who-chip", el).forEach(c => c.onclick = () => c.classList.toggle("on"));
+}
+
 function openModal() {
   state.modalSel = null;
   $("#modal-search").value = "";
@@ -338,13 +347,7 @@ function openModal() {
   $("#f-service").innerHTML = `<option value="">—</option>` + SERVICES.map(s => `<option>${esc(s)}</option>`).join("");
   $("#f-seasons").value = 1; $("#f-episodes").value = "";
   $$("#f-status button").forEach((b, i) => b.classList.toggle("on", i === 0));
-  // who chips
-  const who = $("#f-who");
-  who.innerHTML = Object.values(state.users).map(u =>
-    `<span class="who-chip ${u.id === state.me.id ? "on" : ""}" data-uid="${esc(u.id)}">
-       <span class="pd" style="background:${userColor(u.id)}">${initials(u.display_name)}</span>${esc(u.id === state.me.id ? "Me" : u.display_name)}
-     </span>`).join("");
-  $$(".who-chip", who).forEach(c => c.onclick = () => c.classList.toggle("on"));
+  buildWhoChips($("#f-who"));
   $("#modal-add").disabled = true;
   $("#modal-backdrop").hidden = false;
   $("#modal-search").focus();
@@ -462,6 +465,81 @@ async function applyRematch(r) {
   } catch (e) { toast("Re-match failed: " + e.message); }
 }
 
+// ---- bulk / list add ------------------------------------------------------
+function openBulk() {
+  closeModal();
+  $("#bulk-text").value = "";
+  $("#bulk-results").hidden = true;
+  $("#bulk-results").innerHTML = "";
+  $$("#bulk-status button").forEach((b, i) => b.classList.toggle("on", i === 0));
+  buildWhoChips($("#bulk-who"));
+  $("#bulk-add").disabled = true;
+  $("#bulk-backdrop").hidden = false;
+  $("#bulk-text").focus();
+}
+function closeBulk() { $("#bulk-backdrop").hidden = true; }
+
+async function bulkFind() {
+  const queries = $("#bulk-text").value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (!queries.length) { toast("Paste some titles first"); return; }
+  const btn = $("#bulk-find");
+  btn.disabled = true; btn.textContent = "Finding…";
+  try {
+    const data = await api("/api/resolve", { method: "POST", body: JSON.stringify({ queries }) });
+    renderBulkResults(data.results || []);
+  } catch (e) { toast("Lookup failed: " + e.message); }
+  btn.disabled = false; btn.textContent = "Find matches";
+}
+
+function renderBulkResults(results) {
+  const box = $("#bulk-results");
+  box.innerHTML = "";
+  let matched = 0;
+  for (const r of results) {
+    const row = document.createElement("label");
+    row.className = "bulk-row" + (r.match ? "" : " nomatch");
+    if (r.match) {
+      const m = r.match;
+      if (!m.in_catalog) matched++;
+      const sub = [m.year, m.type === "tv" ? "TV" : (m.type === "movie" ? "Movie" : "")].filter(Boolean).join(" · ");
+      row.innerHTML = `
+        <input type="checkbox" ${m.in_catalog ? "" : "checked"}>
+        ${m.poster_url ? `<img src="${esc(m.poster_url)}" alt="">` : `<div class="ph"></div>`}
+        <div><div class="bt">${esc(m.title)}</div><div class="bs">${esc(sub)} &nbsp;·&nbsp; for “${esc(r.query)}”</div></div>
+        ${m.in_catalog ? `<span class="badge-mini">on list</span>` : ""}`;
+      row._match = m;
+    } else {
+      row.innerHTML = `<input type="checkbox" disabled><div class="ph"></div>
+        <div><div class="bt">No match</div><div class="bs">for “${esc(r.query)}”</div></div>`;
+    }
+    box.appendChild(row);
+  }
+  box.hidden = false;
+  $("#bulk-add").disabled = matched === 0;
+}
+
+async function submitBulk() {
+  const items = $$("#bulk-results .bulk-row")
+    .filter(r => { const cb = $("input[type=checkbox]", r); return cb && cb.checked && r._match; })
+    .map(r => r._match);
+  if (!items.length) { toast("Nothing selected"); return; }
+  const status = $("#bulk-status button.on").dataset.status;
+  const who = $$("#bulk-who .who-chip.on").map(c => c.dataset.uid);
+  const btn = $("#bulk-add");
+  btn.disabled = true; btn.textContent = "Adding…";
+  try {
+    const res = await api("/api/titles/bulk", { method: "POST", body: JSON.stringify({ items, status, who }) });
+    const parts = [];
+    if (res.added.length) parts.push(`added ${res.added.length}`);
+    if (res.skipped.length) parts.push(`${res.skipped.length} already there`);
+    if (res.failed.length) parts.push(`${res.failed.length} failed`);
+    toast(parts.join(" · ") || "Done");
+    closeBulk();
+    populateServiceFilter();
+    await loadTitles();
+  } catch (e) { toast("Add failed: " + e.message); btn.disabled = false; btn.textContent = "Add selected"; }
+}
+
 // ---- edit details ---------------------------------------------------------
 let editTarget = null;
 function openEdit(t) {
@@ -545,9 +623,16 @@ function wireUI() {
   $("#edit-save").addEventListener("click", saveEdit);
   $("#edit-backdrop").addEventListener("click", e => { if (e.target.id === "edit-backdrop") closeEdit(); });
   $("#e-type").addEventListener("change", e => { $("#e-tv-fields").hidden = e.target.value !== "tv"; });
+  $("#bulk-link").addEventListener("click", openBulk);
+  $("#bulk-close").addEventListener("click", closeBulk);
+  $("#bulk-cancel").addEventListener("click", closeBulk);
+  $("#bulk-find").addEventListener("click", bulkFind);
+  $("#bulk-add").addEventListener("click", submitBulk);
+  $("#bulk-status").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setOn("#bulk-status", b); });
+  $("#bulk-backdrop").addEventListener("click", e => { if (e.target.id === "bulk-backdrop") closeBulk(); });
   $("#accent-btn").addEventListener("click", (e) => { e.stopPropagation(); toggleAccentMenu(); });
   document.addEventListener("click", e => { if (!e.target.closest("#accent-menu") && !e.target.closest("#accent-btn")) $("#accent-menu").hidden = true; });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); closeRematch(); closeEdit(); $("#accent-menu").hidden = true; } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); closeRematch(); closeEdit(); closeBulk(); $("#accent-menu").hidden = true; } });
 }
 function setOn(container, btn) { $$(container + " button").forEach(b => b.classList.remove("on")); btn.classList.add("on"); }
 

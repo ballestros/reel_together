@@ -182,6 +182,20 @@ body.compact .episodes, body.compact .markfin { display: none; }
 .who-chip.on { background: var(--accent-soft); border-color: color-mix(in oklab, var(--accent) 45%, transparent); color: var(--accent-ink); }
 .who-chip .pd { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; font-size: .58rem; font-weight: 700; color: #fff; }
 
+/* ---- Bulk / list add ---- */
+.field textarea { width: 100%; padding: .55rem .7rem; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 9px; outline: none; font: inherit; resize: vertical; }
+.field textarea:focus { border-color: var(--accent); }
+.linklike { align-self: flex-start; background: none; border: none; color: #4f7396; font-size: .82rem; padding: .1rem 0; cursor: pointer; }
+.linklike:hover { text-decoration: underline; }
+.bulk-results { display: flex; flex-direction: column; gap: .3rem; max-height: 260px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: .6rem; margin-top: .2rem; }
+.bulk-row { display: flex; align-items: center; gap: .55rem; padding: .15rem 0; cursor: pointer; }
+.bulk-row.nomatch { opacity: .55; cursor: default; }
+.bulk-row input[type=checkbox] { width: 16px; height: 16px; flex: none; accent-color: var(--accent); }
+.bulk-row img, .bulk-row .ph { width: 30px; height: 44px; border-radius: 4px; object-fit: cover; background: var(--column); flex: none; }
+.bulk-row .bt { font-weight: 600; font-size: .87rem; }
+.bulk-row .bs { color: var(--faint); font-size: .75rem; }
+.bulk-row .badge-mini { font-size: .64rem; color: var(--muted); background: var(--column); border: 1px solid var(--border); padding: .05rem .35rem; border-radius: 5px; margin-left: auto; white-space: nowrap; }
+
 /* ---- Accent menu ---- */
 .menu { position: fixed; z-index: 50; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: var(--shadow); padding: .6rem; display: flex; flex-direction: column; gap: .5rem; min-width: 180px; }
 .menu .row { display: flex; gap: .4rem; }
