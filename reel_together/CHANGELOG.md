@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.11
+
+- Import a Reel Together JSON export — **Import backup** in the ◐ menu, or
+  `POST /api/import`. It merges: titles are added/updated by source + source_id
+  (using the exported fields, no re-fetching), people in the file are recreated
+  as needed, and everyone's status/rating is restored. Re-importing the same
+  file updates rather than duplicates and never deletes anything — the
+  round-trip for moving a list into another instance or the web app.
+
+## 0.1.10
+
+- Export your list from the ◐ menu. **Export backup (JSON)** is a versioned,
+  self-contained snapshot (schema 1) for importing into another Reel Together —
+  e.g. the web app: titles are keyed by source + source_id and interests carry
+  display names so people can be mapped. **Export CSV** is the lossy/portable
+  option for spreadsheets and third-party watchlist tools, which match on
+  Title / Year / Rating.
+
 ## 0.1.9
 
 - Batch add: paste a list of titles (one per line, optionally `Title (Year)` to

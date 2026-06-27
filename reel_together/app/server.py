@@ -6,10 +6,13 @@ handled by Home Assistant; we read the forwarded user identity in ``auth``.
 """
 from __future__ import annotations
 
+import csv
+import io
 import logging
 import re
+from datetime import datetime, timezone
 
-from flask import Flask, abort, g, jsonify, render_template, request
+from flask import Flask, Response, abort, g, jsonify, render_template, request
 
 from . import __version__ as VERSION
 from . import airing, auth, config, db, enrich
@@ -336,6 +339,130 @@ def create_app() -> Flask:
     def api_activity():
         limit = min(int(request.args.get("limit", 30) or 30), 100)
         return jsonify(activity=db.list_activity(limit=limit))
+
+    @app.get("/api/export.json")
+    def api_export_json():
+        """Versioned, self-contained snapshot for importing into another
+        Reel Together (e.g. the web app). Per-instance ids and computed fields
+        are deliberately omitted; titles are keyed by (source, source_id) and
+        interests carry display names so the importer can map people."""
+        titles = []
+        for t in db.list_titles(g.user["id"]):
+            titles.append({
+                "type": t["type"],
+                "title": t["title"],
+                "year": t.get("year"),
+                "overview": t.get("overview"),
+                "poster_url": t.get("poster_url"),
+                "service": t.get("service"),
+                "seasons": t.get("seasons"),
+                "episodes_total": t.get("episodes_total"),
+                "episodes_watched": t.get("episodes_watched"),
+                "source": t["source"],
+                "source_id": t["source_id"],
+                "source_url": t.get("source_url"),
+                "extra": t.get("extra") or {},
+                "interests": [
+                    {
+                        "user_id": i["user_id"],
+                        "display_name": i["display_name"],
+                        "status": i["status"],
+                        "rating": i["rating"],
+                    }
+                    for i in (t.get("interests") or [])
+                ],
+            })
+        resp = jsonify(
+            app="reel-together",
+            schema=1,
+            exported_at=datetime.now(timezone.utc).isoformat(),
+            users=[
+                {"id": u["id"], "username": u.get("username"), "display_name": u["display_name"]}
+                for u in db.list_users()
+            ],
+            titles=titles,
+        )
+        resp.headers["Content-Disposition"] = "attachment; filename=reel-together.json"
+        return resp
+
+    @app.get("/api/export.csv")
+    def api_export_csv():
+        """Importer-friendly CSV (Title/Year/Rating map into most watchlist tools)."""
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            "Title", "Year", "Type", "Status", "Rating", "Service",
+            "Seasons", "Episodes", "WantedBy", "Source", "URL",
+        ])
+        for t in db.list_titles(g.user["id"]):
+            wanted = ", ".join(
+                i["display_name"] for i in (t.get("interests") or []) if i["status"] == "want"
+            )
+            writer.writerow([
+                t.get("title", ""), t.get("year") or "", t.get("type", ""),
+                t.get("my_status") or "", t.get("my_rating") or "",
+                t.get("service") or "", t.get("seasons") or "", t.get("episodes_total") or "",
+                wanted, t.get("source", ""), t.get("source_url") or "",
+            ])
+        return Response(
+            buf.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=reel-together.csv"},
+        )
+
+    @app.post("/api/import")
+    def api_import():
+        """Merge a Reel Together JSON export into this instance.
+
+        Titles are added/updated by (source, source_id) using the exported
+        fields (no provider calls); people referenced in the file are created as
+        needed; statuses/ratings are restored. Idempotent — re-importing updates
+        rather than duplicates, and never deletes existing titles.
+        """
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or "titles" not in data:
+            return jsonify(error="expected a Reel Together JSON export"), 400
+        if data.get("schema") not in (1, "1", None):
+            return jsonify(error=f"unsupported export schema: {data.get('schema')}"), 400
+
+        existing_users = {u["id"] for u in db.list_users()}
+
+        def ensure_user(uid, username, display):
+            if uid and uid not in existing_users:
+                db.upsert_user(uid, username, display or "Someone")
+                existing_users.add(uid)
+
+        for u in (data.get("users") or []):
+            ensure_user(u.get("id"), u.get("username"), u.get("display_name"))
+
+        existing_titles = {(t["source"], t["source_id"]) for t in db.list_titles(g.user["id"])}
+        added = updated = interests = 0
+        for t in (data.get("titles") or []):
+            source, source_id, title = t.get("source"), t.get("source_id"), t.get("title")
+            if not source or source_id is None or not title:
+                continue
+            was_present = (source, str(source_id)) in existing_titles
+            row = db.add_title({
+                "source": source, "source_id": str(source_id),
+                "type": t.get("type", "unknown"), "title": title,
+                "year": t.get("year"), "overview": t.get("overview"),
+                "poster_url": t.get("poster_url"), "service": t.get("service"),
+                "seasons": t.get("seasons"), "episodes_total": t.get("episodes_total"),
+                "source_url": t.get("source_url"), "extra": t.get("extra") or {},
+            }, added_by=g.user["id"])
+            if t.get("episodes_watched"):
+                db.update_title(row["id"], {"episodes_watched": t["episodes_watched"]})
+            updated += 1 if was_present else 0
+            added += 0 if was_present else 1
+            for i in (t.get("interests") or []):
+                uid = i.get("user_id")
+                if not uid:
+                    continue
+                ensure_user(uid, None, i.get("display_name"))
+                if i.get("status") in db.VALID_STATUSES:
+                    db.set_interest(uid, row["id"], status=i["status"], rating=i.get("rating"))
+                    interests += 1
+        return jsonify(added=added, updated=updated, interests=interests)
 
     @app.errorhandler(403)
     def _forbidden(_e):

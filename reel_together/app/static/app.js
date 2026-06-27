@@ -583,6 +583,17 @@ function applyAccent(name) {
 }
 function applyCompact(on) { document.body.classList.toggle("compact", on); localStorage.setItem("rt_compact", on ? "1" : ""); }
 
+async function importFile(file) {
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const res = await api("/api/import", { method: "POST", body: JSON.stringify(data) });
+    toast(`Imported — ${res.added} new, ${res.updated} updated`);
+    $("#accent-menu").hidden = true;
+    await loadTitles();
+  } catch (e) { toast("Import failed: " + e.message); }
+}
+
 function toggleAccentMenu() {
   const m = $("#accent-menu");
   if (!m.hidden) { m.hidden = true; return; }
@@ -591,9 +602,14 @@ function toggleAccentMenu() {
   m.innerHTML = `
     <div class="row">${Object.entries(ACCENTS).map(([n, a]) =>
       `<span class="swatch ${n === cur ? "on" : ""}" title="${n}" data-accent="${n}" style="background:${a.a}"></span>`).join("")}</div>
-    <label>Compact cards <input type="checkbox" id="compact-toggle" ${compact ? "checked" : ""}></label>`;
+    <label>Compact cards <input type="checkbox" id="compact-toggle" ${compact ? "checked" : ""}></label>
+    <div class="menu-sep"></div>
+    <a class="menu-link" href="${BASE}/api/export.csv" download>⬇ Export CSV</a>
+    <a class="menu-link" href="${BASE}/api/export.json" download>⬇ Export backup (JSON)</a>
+    <label class="menu-link" style="cursor:pointer">⬆ Import backup<input type="file" id="import-file" accept="application/json,.json" hidden></label>`;
   $$(".swatch", m).forEach(s => s.onclick = () => { applyAccent(s.dataset.accent); $$(".swatch", m).forEach(x => x.classList.remove("on")); s.classList.add("on"); });
   $("#compact-toggle", m).onchange = (e) => applyCompact(e.target.checked);
+  $("#import-file", m).onchange = (e) => importFile(e.target.files[0]);
   const r = $("#accent-btn").getBoundingClientRect();
   m.style.top = (r.bottom + 8) + "px";
   m.style.right = (window.innerWidth - r.right) + "px";

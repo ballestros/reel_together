@@ -202,6 +202,9 @@ body.compact .episodes, body.compact .markfin { display: none; }
 .swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
 .swatch.on { border-color: var(--text); }
 .menu label { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .85rem; color: var(--muted); }
+.menu-sep { height: 1px; background: var(--border); margin: .15rem 0; }
+.menu-link { display: block; font-size: .85rem; color: var(--muted); text-decoration: none; padding: .25rem .1rem; }
+.menu-link:hover { color: var(--accent-ink); }
 
 /* ---- Toast ---- */
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: .55rem 1rem; border-radius: 10px; font-size: .88rem; z-index: 60; box-shadow: var(--shadow); }

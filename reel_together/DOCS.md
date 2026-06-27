@@ -61,6 +61,15 @@ Wikipedia is used with no key at all — TMDB only upgrades the experience.
   **search**.
 - **Appearance** — the ◐ button switches the accent colour (Marigold, Teal,
   Rose, Plum) and toggles compact cards; your choice is remembered per browser.
+- **Export** — the ◐ menu has **Export CSV** (opens in a spreadsheet; imports
+  into most third-party watchlist tools, which match on Title / Year) and
+  **Export backup (JSON)** — a versioned, self-contained snapshot (schema 1) for
+  importing into another Reel Together, such as the web app. Titles are keyed by
+  `source` + `source_id`; each carries its `interests` with display names.
+- **Import** — **Import backup** in the ◐ menu reads a Reel Together JSON export
+  and merges it in: new titles are added, existing ones updated, and people from
+  the file are recreated with their statuses and ratings. Re-importing the same
+  file is safe (it updates rather than duplicating).
 
 > People appear as "who" options once they've opened the app at least once
 > (that's when Home Assistant first tells the add-on who they are).
