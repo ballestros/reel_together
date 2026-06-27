@@ -90,6 +90,29 @@
     </div>
   </div>
 
+  <div id="edit-backdrop" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Edit details">
+      <div class="modal-head"><h2>Edit details</h2><button id="edit-close" class="icon-btn">&times;</button></div>
+      <div class="modal-body">
+        <p id="edit-title" class="muted small"></p>
+        <div class="field-row">
+          <div class="field"><label for="e-type">Type</label>
+            <select id="e-type"><option value="movie">Movie</option><option value="tv">TV show</option></select></div>
+          <div class="field"><label for="e-service">Streaming on</label>
+            <select id="e-service"></select></div>
+        </div>
+        <div id="e-tv-fields" class="field-row" hidden>
+          <div class="field"><label for="e-seasons">Seasons</label><input id="e-seasons" type="number" min="0"></div>
+          <div class="field"><label for="e-episodes">Episodes (total)</label><input id="e-episodes" type="number" min="0"></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button id="edit-cancel" class="btn-ghost">Cancel</button>
+        <button id="edit-save" class="btn-accent">Save</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" hidden></div>
 
   <script>window.__BASE__ = "{{ base_path }}";</script>

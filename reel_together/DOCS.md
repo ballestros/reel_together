@@ -48,6 +48,9 @@ Wikipedia is used with no key at all — TMDB only upgrades the experience.
 - **Wrong match?** — with a TMDB key set, hover a card and click **↻** to search
   TMDB and pick the correct entry. Useful on the rare occasion background
   enrichment matched an ambiguously-named title to the wrong poster.
+- **Edit details** — click the ✎ on any card to fix its type, streaming service,
+  or season/episode counts (for example, if you forgot to set where it's
+  streaming when you added it).
 - **Who's who** — each person who's added a title shows as a coloured dot. Use
   the **Everyone / Me** toggle to switch between the whole household's board and
   just yours; filter by **type** (All / Movies / TV), **service**, or live

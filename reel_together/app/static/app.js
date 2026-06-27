@@ -71,6 +71,7 @@ async function boot() {
     if (document.hidden) return;
     if (!$("#modal-backdrop").hidden) return;
     if (!$("#rematch-backdrop").hidden) return;
+    if (!$("#edit-backdrop").hidden) return;
     if (document.querySelector(".card.dragging")) return;
     refreshMe().then(loadTitles).catch(() => {});
   }, 15000);
@@ -188,6 +189,14 @@ function airingBadge(t) {
   return `<span class="airing-badge" title="Next episode airs">▶ New ep ${esc(relAir(when))}</span>`;
 }
 
+function mkActionBtn(label, title, onClick) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.title = title;
+  b.onclick = (e) => { e.stopPropagation(); onClick(); };
+  return b;
+}
+
 function card(t, colKey) {
   const el = document.createElement("article");
   el.className = "card";
@@ -205,18 +214,17 @@ function card(t, colKey) {
         ${airingBadge(t)}
       </div>
       <div class="dots">${dotsHtml(t)}</div>
-      <button class="remove" title="Remove">&times;</button>
+      <div class="card-actions"></div>
     </div>`;
 
-  $(".remove", el).onclick = (e) => { e.stopPropagation(); removeTitle(t); };
+  const actions = $(".card-actions", el);
+  actions.appendChild(mkActionBtn("✎", "Edit details", () => openEdit(t)));
   if (state.config.tmdb_enabled) {
-    const rb = document.createElement("button");
-    rb.className = "rematch";
-    rb.textContent = "↻";
-    rb.title = "Not the right match? Re-match from TMDB";
-    rb.onclick = (e) => { e.stopPropagation(); openRematch(t); };
-    $(".top", el).appendChild(rb);
+    actions.appendChild(mkActionBtn("↻", "Not the right match? Re-match from TMDB", () => openRematch(t)));
   }
+  const rm = mkActionBtn("✕", "Remove from list", () => removeTitle(t));
+  rm.className = "remove";
+  actions.appendChild(rm);
 
   el.appendChild(statusControl(t)); // touch-friendly status change (drag is mouse-only)
 
@@ -454,6 +462,40 @@ async function applyRematch(r) {
   } catch (e) { toast("Re-match failed: " + e.message); }
 }
 
+// ---- edit details ---------------------------------------------------------
+let editTarget = null;
+function openEdit(t) {
+  editTarget = t;
+  $("#edit-title").textContent = t.title + (t.year ? ` (${t.year})` : "");
+  $("#e-type").value = t.type === "tv" ? "tv" : "movie";
+  const opts = [...SERVICES];
+  if (t.service && !opts.includes(t.service)) opts.push(t.service);
+  $("#e-service").innerHTML = `<option value="">—</option>` + opts.map(s => `<option>${esc(s)}</option>`).join("");
+  $("#e-service").value = t.service || "";
+  $("#e-seasons").value = t.seasons || "";
+  $("#e-episodes").value = t.episodes_total || "";
+  $("#e-tv-fields").hidden = $("#e-type").value !== "tv";
+  $("#edit-backdrop").hidden = false;
+}
+function closeEdit() { $("#edit-backdrop").hidden = true; editTarget = null; }
+async function saveEdit() {
+  if (!editTarget) return;
+  const type = $("#e-type").value;
+  const body = {
+    type,
+    service: $("#e-service").value || null,
+    seasons: type === "tv" ? (parseInt($("#e-seasons").value, 10) || null) : null,
+    episodes_total: type === "tv" ? (parseInt($("#e-episodes").value, 10) || null) : null,
+  };
+  try {
+    await api(`/api/titles/${editTarget.id}`, { method: "PUT", body: JSON.stringify(body) });
+    toast("Saved");
+    closeEdit();
+    populateServiceFilter();
+    await loadTitles();
+  } catch (e) { toast("Save failed: " + e.message); }
+}
+
 // ---- appearance -----------------------------------------------------------
 function applyAccent(name) {
   const a = ACCENTS[name] || ACCENTS.Marigold;
@@ -498,9 +540,14 @@ function wireUI() {
   $("#rematch-cancel").addEventListener("click", closeRematch);
   $("#rematch-backdrop").addEventListener("click", e => { if (e.target.id === "rematch-backdrop") closeRematch(); });
   $("#rematch-search").addEventListener("input", e => { clearTimeout(rematchTimer); const q = e.target.value.trim(); rematchTimer = setTimeout(() => runRematchSearch(q), 250); });
+  $("#edit-close").addEventListener("click", closeEdit);
+  $("#edit-cancel").addEventListener("click", closeEdit);
+  $("#edit-save").addEventListener("click", saveEdit);
+  $("#edit-backdrop").addEventListener("click", e => { if (e.target.id === "edit-backdrop") closeEdit(); });
+  $("#e-type").addEventListener("change", e => { $("#e-tv-fields").hidden = e.target.value !== "tv"; });
   $("#accent-btn").addEventListener("click", (e) => { e.stopPropagation(); toggleAccentMenu(); });
   document.addEventListener("click", e => { if (!e.target.closest("#accent-menu") && !e.target.closest("#accent-btn")) $("#accent-menu").hidden = true; });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); closeRematch(); $("#accent-menu").hidden = true; } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); closeRematch(); closeEdit(); $("#accent-menu").hidden = true; } });
 }
 function setOn(container, btn) { $$(container + " button").forEach(b => b.classList.remove("on")); btn.classList.add("on"); }
 

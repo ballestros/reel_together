@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.8
+
+- Edit a title's details: each card now has a ✎ action that opens a small editor
+  to fix its type, streaming service, and season/episode counts — handy when you
+  forgot to set where something's streaming. The card's edit / re-match / remove
+  controls are now grouped in one tidy corner row.
+
 ## 0.1.7
 
 - Fix the periodic flicker: the board now re-renders only when the data has
