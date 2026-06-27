@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.12
+
+- Fix: marking a title finished (or dragging it to Finished) could bounce it
+  back to Want to Watch when another household member still had it on their
+  list. In the Everyone view your own status now wins for titles you've acted
+  on, so Mark finished and drag-to-column land where you put them.
+
 ## 0.1.11
 
 - Import a Reel Together JSON export — **Import backup** in the ◐ menu, or

@@ -120,12 +120,14 @@ function populateServiceFilter() {
 // ---- board ----------------------------------------------------------------
 function columnFor(t) {
   if (state.personFilter === "me") return t.my_status; // null/'skip' dropped by the bucket guard
+  // Everyone view: my own status wins so my actions (drag, Mark finished) land
+  // where I put them. Fall back to a household roll-up for titles I haven't touched.
+  if (t.my_status) return t.my_status === "skip" ? null : t.my_status;
   const st = (t.interests || []).map(i => i.status);
   if (st.includes("watching")) return "watching";
   if (st.includes("want")) return "want";
   if (st.includes("watched")) return "watched";
-  if (st.length) return null; // only 'skip' → don't show
-  return "want"; // in catalog but nobody has a status yet → Want to Watch
+  return st.length ? null : "want"; // only 'skip' → hide; none yet → Want
 }
 
 function visibleTitles() {
